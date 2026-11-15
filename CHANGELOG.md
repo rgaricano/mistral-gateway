@@ -7,6 +7,12 @@ Changelog conventions:
 
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- Clients that send `store` no longer get a 422 from `/v1/chat/completions`. OpenAI clients send it by default, and Mistral rejects the field there. The gateway now drops it for both routes, so `/v1/responses` also accepts `store: true` instead of refusing it.
+
 ## [1.0.6] - 2026-11-08
 
 ### Added
