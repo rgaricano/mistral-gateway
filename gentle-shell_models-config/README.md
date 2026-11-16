@@ -101,25 +101,24 @@ The `cost` field in `models.json` carries **Mistral's official list prices**
 and each model's docs. pi multiplies them by the tokens of each request, which
 is what the session statistics show.
 
-| Model | Input $/M | Input €/M | Cached $/M | Cached €/M | Output $/M | Output €/M |
-|-------|----------:|----------:|-----------:|-----------:|-----------:|-----------:|
-| `magistral-medium-latest` | 2 | 1.84 | 0.15 | 0.138 | 5 | 4.6 |
-| `mistral-medium-latest` | 1.5 | 1.38 | 0.15 | 0.138 | 7.5 | 6.9 |
-| `zai-glm-5-3` | 1.4 | 1.288 | 0.14 | 0.1288 | 4.4 | 4.048 |
-| `glm-5.2` | 1.4 | 1.288 | 0.26 | 0.2392 | 4.4 | 4.048 |
-| `mistral-large` | 0.7 | 0.644 | 0.07 | 0.0644 | 2.1 | 1.932 |
-| `mistral-large-4` | 0.7 | 0.644 | 0.07 | 0.0644 | 2.1 | 1.932 |
-| `deepseek-v4-1-flash-1017` | 0.3 | 0.276 | 0.007 | 0.0064 | 1.2 | 1.104 |
-| `codestral-2508` | 0.3 | 0.276 | 0.03 | 0.0276 | 0.9 | 0.828 |
-| `ministral-14b-2512` | 0.2 | 0.184 | 0.02 | 0.0184 | 0.2 | 0.184 |
-| `zai-glm-5-3-flash` | 0.15 | 0.138 | 0.03 | 0.0276 | 0.5 | 0.46 |
-| `mistral-small-2603` | 0.15 | 0.138 | 0.015 | 0.0138 | 0.6 | 0.552 |
-| `mistral-vibe-cli-with-tools` | 0.15 | 0.138 | 0.015 | 0.0138 | 0.6 | 0.552 |
-| `ministral-8b-2512` | 0.15 | 0.138 | 0.015 | 0.0138 | 0.15 | 0.138 |
-| `ministral-3b-2512` | 0.1 | 0.092 | 0.01 | 0.0092 | 0.1 | 0.092 |
-| `voxtral-small-2507` | 0.1 | 0.092 | 0.01 | 0.0092 | 0.3 | 0.276 |
-| `labs-leanstral-1-5-1` | 0 | 0 | 0 | 0 | 0 | 0 | (free Labs preview)
-
+| Model | Input | Cached | Output |
+|-------|-------|--------|--------|
+| `magistral-medium-latest` | $2 / 1.84€ | $0.15 / 0.138€ | $5 / 4.6€ |
+| `mistral-medium-latest` | $1.5 / 1.38€ | $0.15 / 0.138€ | $7.5 / 6.9€ |
+| `zai-glm-5-3` | $1.4 / 1.288€ | $0.14 / 0.1288€ | $4.4 / 4.048€ |
+| `glm-5.2` | $1.4 / 1.288€ | $0.26 / 0.2392€ | $4.4 / 4.048€ |
+| `mistral-large` | $0.7 / 0.644€ | $0.07 / 0.0644€ | $2.1 / 1.932€ |
+| `mistral-large-4` | $0.7 / 0.644€ | $0.07 / 0.0644€ | $2.1 / 1.932€ |
+| `deepseek-v4-1-flash-1017` | $0.3 / 0.276€ | $0.007 / 0.0064€ | $1.2 / 1.104€ |
+| `codestral-2508` | $0.3 / 0.276€ | $0.03 / 0.0276€ | $0.9 / 0.828€ |
+| `ministral-14b-2512` | $0.2 / 0.184€ | $0.02 / 0.0184€ | $0.2 / 0.184€ |
+| `zai-glm-5-3-flash` | $0.15 / 0.138€ | $0.03 / 0.0276€ | $0.5 / 0.46€ |
+| `mistral-small-2603` | $0.15 / 0.138€ | $0.015 / 0.0138€ | $0.6 / 0.552€ |
+| `mistral-vibe-cli-with-tools` | $0.15 / 0.138€ | $0.015 / 0.0138€ | $0.6 / 0.552€ |
+| `ministral-8b-2512` | $0.15 / 0.138€ | $0.015 / 0.0138€ | $0.15 / 0.138€ |
+| `ministral-3b-2512` | $0.1 / 0.092€ | $0.01 / 0.0092€ | $0.1 / 0.092€ |
+| `voxtral-small-2507` | $0.1 / 0.092€ | $0.01 / 0.0092€ | $0.3 / 0.276€ |
+| `labs-leanstral-1-5-1` | $0 / 0€ | $0 / 0€ | $0 / 0€ | (free Labs preview)
 Rates: 1 USD ≈ 0.92 EUR (reference only; the `cost` values in `models.json` are the USD column). `cacheWrite` is 0 for every model: Mistral does not bill cache writes separately.
 
 **What the numbers are, and are not.** The Vibe plan is a monthly budget, not pay-per-token: the gateway's `/quota` endpoint is the source of truth for real spending. Measured against a real billing export, this configuration's usage billed at ~0.92x list prices, so the statistics are a fair reference for comparing models and estimating cost, slightly above what the plan actually consumes. Two reasons the real number comes in lower: the plan's budget mechanics, and prompt caching — over half of the measured traffic was served from cache at 10-20% of the input rate.
