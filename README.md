@@ -6,6 +6,8 @@ It uses the same key the official [Mistral Vibe CLI](https://github.com/mistrala
 
 > **Unofficial project.** Not affiliated with, endorsed by or supported by Mistral AI. Read the "Terms of service" section below before using it.
 
+Versión en español: [README.es.md](./README.es.md).
+
 ## Setup
 
 Requirements: Python 3.10+ and a Mistral Vibe plan with coding included (Pro, Team or Enterprise).
