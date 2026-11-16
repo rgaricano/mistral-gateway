@@ -123,7 +123,8 @@ El campo `cost` de `models.json` lleva los **precios oficiales de lista** de Mis
 | `ministral-3b-2512` | $0,1 / 0,092€ | $0,01 / 0,0092€ | $0,1 / 0,092€ |
 | `voxtral-small-2507` | $0,1 / 0,092€ | $0,01 / 0,0092€ | $0,3 / 0,276€ |
 | `labs-leanstral-1-5-1` | $0 / 0€ | $0 / 0€ | $0 / 0€ | (preview de Labs, gratis)
-Cambio aproximado: 1 USD ≈ 0,92 EUR (solo referencia; los valores `cost` de `models.json` son la columna USD). `cacheWrite` está a 0 en todos: Mistral no factura por separado la escritura en caché.
+
+Cambio: 1 USD ≈ 0,92 EUR. Los valores `cost` de `models.json` están en USD. `cacheWrite` está a 0 en todos: Mistral no factura por separado la escritura en caché.
 
 **Qué son y qué no son estos números.** El plan Vibe es un presupuesto mensual, no pago por token: el endpoint `/quota` del gateway es la fuente de verdad del gasto real. Medido contra una exportación real de facturación, el uso de esta configuración se factura a ~0,92x de los precios de lista, así que las estadísticas son una referencia justa para comparar modelos y estimar costes, ligeramente por encima de lo que el plan consume realmente. Dos motivos por los que el número real sale más bajo: la mecánica del presupuesto del plan, y la caché de prompt — más de la mitad del tráfico medido se sirvió desde caché al 10-20% del precio de entrada.
 

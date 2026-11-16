@@ -119,7 +119,8 @@ is what the session statistics show.
 | `ministral-3b-2512` | $0.1 / 0.092€ | $0.01 / 0.0092€ | $0.1 / 0.092€ |
 | `voxtral-small-2507` | $0.1 / 0.092€ | $0.01 / 0.0092€ | $0.3 / 0.276€ |
 | `labs-leanstral-1-5-1` | $0 / 0€ | $0 / 0€ | $0 / 0€ | (free Labs preview)
-Rates: 1 USD ≈ 0.92 EUR (reference only; the `cost` values in `models.json` are the USD column). `cacheWrite` is 0 for every model: Mistral does not bill cache writes separately.
+
+Exchange rate: 1 USD ≈ 0.92 EUR. The `cost` values in `models.json` are in USD. `cacheWrite` is 0 for every model: Mistral does not bill cache writes separately.
 
 **What the numbers are, and are not.** The Vibe plan is a monthly budget, not pay-per-token: the gateway's `/quota` endpoint is the source of truth for real spending. Measured against a real billing export, this configuration's usage billed at ~0.92x list prices, so the statistics are a fair reference for comparing models and estimating cost, slightly above what the plan actually consumes. Two reasons the real number comes in lower: the plan's budget mechanics, and prompt caching — over half of the measured traffic was served from cache at 10-20% of the input rate.
 
