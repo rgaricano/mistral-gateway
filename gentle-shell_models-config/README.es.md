@@ -103,46 +103,32 @@ respuesta de los modelos:
 
 ## Precios
 
-El campo `cost` de `models.json` lleva los **precios oficiales de lista** de
-Mistral (USD por millón de tokens), tomados de la
-[página de precios de Mistral](https://docs.mistral.ai/inference/pricing) y la
-documentación de cada modelo. pi los multiplica por los tokens de cada
-petición, y eso es lo que muestran las estadísticas de sesión.
+El campo `cost` de `models.json` lleva los **precios oficiales de lista** de Mistral (USD por millón de tokens), tomados de la [página de precios de Mistral](https://docs.mistral.ai/inference/pricing) y la documentación de cada modelo. pi los multiplica por los tokens de cada petición, y eso es lo que muestran las estadísticas de sesión.
 
-| Modelo | Input | Input cacheado | Output |
-|--------|------:|---------------:|-------:|
-| `magistral-medium-latest` | 2,00 | 0,15 | 5,00 |
-| `mistral-medium-latest` | 1,50 | 0,15 | 7,50 |
-| `zai-glm-5-3`, `glm-5.2` | 1,40 | 0,14 (0,26 para 5.2) | 4,40 |
-| `mistral-large`, `mistral-large-4` | 0,70 | 0,07 | 2,10 |
-| `deepseek-v4-1-flash-1017` | 0,30 | 0,007 | 1,20 |
-| `codestral-2508` | 0,30 | 0,03 | 0,90 |
-| `ministral-14b-2512` | 0,20 | 0,02 | 0,20 |
-| `zai-glm-5-3-flash` | 0,15 | 0,03 | 0,50 |
-| `mistral-small-2603`, `mistral-vibe-cli-with-tools` | 0,15 | 0,015 | 0,60 |
-| `ministral-8b-2512` | 0,15 | 0,015 | 0,15 |
-| `ministral-3b-2512` | 0,10 | 0,01 | 0,10 |
-| `voxtral-small-2507` | 0,10 | 0,01 | 0,30 |
-| `labs-leanstral-1-5-1` | 0,00 | 0,00 | 0,00 (preview de Labs, gratis) |
+| Modelo | Input $/M | Input €/M | Input caché $/M | Input caché €/M | Output $/M | Output €/M |
+|--------|----------:|----------:|----------------:|----------------:|-----------:|-----------:|
+| `magistral-medium-latest` | 2 | 1,84 | 0,15 | 0,138 | 5 | 4,6 |
+| `mistral-medium-latest` | 1,5 | 1,38 | 0,15 | 0,138 | 7,5 | 6,9 |
+| `zai-glm-5-3` | 1,4 | 1,288 | 0,14 | 0,1288 | 4,4 | 4,048 |
+| `glm-5.2` | 1,4 | 1,288 | 0,26 | 0,2392 | 4,4 | 4,048 |
+| `mistral-large` | 0,7 | 0,644 | 0,07 | 0,0644 | 2,1 | 1,932 |
+| `mistral-large-4` | 0,7 | 0,644 | 0,07 | 0,0644 | 2,1 | 1,932 |
+| `deepseek-v4-1-flash-1017` | 0,3 | 0,276 | 0,007 | 0,0064 | 1,2 | 1,104 |
+| `codestral-2508` | 0,3 | 0,276 | 0,03 | 0,0276 | 0,9 | 0,828 |
+| `ministral-14b-2512` | 0,2 | 0,184 | 0,02 | 0,0184 | 0,2 | 0,184 |
+| `zai-glm-5-3-flash` | 0,15 | 0,138 | 0,03 | 0,0276 | 0,5 | 0,46 |
+| `mistral-small-2603` | 0,15 | 0,138 | 0,015 | 0,0138 | 0,6 | 0,552 |
+| `mistral-vibe-cli-with-tools` | 0,15 | 0,138 | 0,015 | 0,0138 | 0,6 | 0,552 |
+| `ministral-8b-2512` | 0,15 | 0,138 | 0,015 | 0,0138 | 0,15 | 0,138 |
+| `ministral-3b-2512` | 0,1 | 0,092 | 0,01 | 0,0092 | 0,1 | 0,092 |
+| `voxtral-small-2507` | 0,1 | 0,092 | 0,01 | 0,0092 | 0,3 | 0,276 |
+| `labs-leanstral-1-5-1` | 0 | 0 | 0 | 0 | 0 | 0 | (preview de Labs, gratis)
 
-`cacheWrite` está a 0 en todos: Mistral no factura por separado la escritura
-en caché.
+Cambio aproximado: 1 USD ≈ 0,92 EUR (solo referencia; los valores `cost` de `models.json` son la columna USD). `cacheWrite` está a 0 en todos: Mistral no factura por separado la escritura en caché.
 
-**Qué son y qué no son estos números.** El plan Vibe es un presupuesto
-mensual, no pago por token: el endpoint `/quota` del gateway es la fuente de
-verdad del gasto real. Medido contra una exportación real de facturación, el
-uso de esta configuración se factura a ~0,92x de los precios de lista, así
-que las estadísticas son una referencia justa para comparar modelos y
-estimar costes, ligeramente por encima de lo que el plan consume realmente.
-Dos motivos por los que el número real sale más bajo: la mecánica del
-presupuesto del plan, y la caché de prompt — más de la mitad del tráfico
-medido se sirvió desde caché al 10-20% del precio de entrada.
+**Qué son y qué no son estos números.** El plan Vibe es un presupuesto mensual, no pago por token: el endpoint `/quota` del gateway es la fuente de verdad del gasto real. Medido contra una exportación real de facturación, el uso de esta configuración se factura a ~0,92x de los precios de lista, así que las estadísticas son una referencia justa para comparar modelos y estimar costes, ligeramente por encima de lo que el plan consume realmente. Dos motivos por los que el número real sale más bajo: la mecánica del presupuesto del plan, y la caché de prompt — más de la mitad del tráfico medido se sirvió desde caché al 10-20% del precio de entrada.
 
-Ejemplo de una exportación real anonimizada de 16 días: ~240M de tokens
-totales en `zai-glm-5-3-flash`, de los que ~197M (82%) fueron lecturas
-cacheadas. A precios de lista ese uso ronda los $9,76; el descuento por caché
-es lo que mantiene la tarifa efectiva a la baja, no un descuento por token
-del plan.
+Ejemplo de una exportación real anonimizada de 16 días: ~240M de tokens totales en `zai-glm-5-3-flash`, de los que ~197M (82%) fueron lecturas cacheadas. A precios de lista ese uso ronda los $9,76; el descuento por caché es lo que mantiene la tarifa efectiva a la baja, no un descuento por token del plan.
 
 ## Qué suscripción usa cada proveedor
 
