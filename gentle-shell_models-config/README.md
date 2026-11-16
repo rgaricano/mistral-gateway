@@ -94,6 +94,46 @@ good:
   pay off: the summarisation request itself would eat a large share of the
   context the model has.
 
+## Pricing
+
+The `cost` field in `models.json` carries **Mistral's official list prices**
+(USD per million tokens), taken from [Mistral's pricing page](https://docs.mistral.ai/inference/pricing)
+and each model's docs. pi multiplies them by the tokens of each request, which
+is what the session statistics show.
+
+| Model | Input | Cached input | Output |
+|-------|------:|-------------:|-------:|
+| `magistral-medium-latest` | 2.00 | 0.15 | 5.00 |
+| `mistral-medium-latest` | 1.50 | 0.15 | 7.50 |
+| `zai-glm-5-3`, `glm-5.2` | 1.40 | 0.14 (0.26 for 5.2) | 4.40 |
+| `mistral-large`, `mistral-large-4` | 0.70 | 0.07 | 2.10 |
+| `deepseek-v4-1-flash-1017` | 0.30 | 0.007 | 1.20 |
+| `codestral-2508` | 0.30 | 0.03 | 0.90 |
+| `ministral-14b-2512` | 0.20 | 0.02 | 0.20 |
+| `zai-glm-5-3-flash` | 0.15 | 0.03 | 0.50 |
+| `mistral-small-2603`, `mistral-vibe-cli-with-tools` | 0.15 | 0.015 | 0.60 |
+| `ministral-8b-2512` | 0.15 | 0.015 | 0.15 |
+| `ministral-3b-2512` | 0.10 | 0.01 | 0.10 |
+| `voxtral-small-2507` | 0.10 | 0.01 | 0.30 |
+| `labs-leanstral-1-5-1` | 0.00 | 0.00 | 0.00 (free Labs preview) |
+
+`cacheWrite` is 0 for every model: Mistral does not bill cache writes
+separately.
+
+**What the numbers are, and are not.** The Vibe plan is a monthly budget, not
+pay-per-token: the gateway's `/quota` endpoint is the source of truth for real
+spending. Measured against a real billing export, this configuration's usage
+billed at ~0.92x list prices, so the statistics are a fair reference for
+comparing models and estimating cost, slightly above what the plan actually
+consumes. Two reasons the real number comes in lower: the plan's budget
+mechanics, and prompt caching — over half of the measured traffic was served
+from cache at 10-20% of the input rate.
+
+Example from an anonymised 16-day export: ~240M total tokens on
+`zai-glm-5-3-flash`, of which ~197M (82%) were cached reads. At list prices
+that usage is ~$9.76; the cache discount is what keeps the effective rate
+down, not a per-token discount on the plan.
+
 ## Which subscription each provider uses
 
 The two providers in `models.json` reach Mistral through different channels:
