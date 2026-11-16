@@ -1,0 +1,155 @@
+{
+  "compaction": {
+    "enabled": true,
+    "keepRecentTokens": 20000,
+    "modelOverrides": {
+      "Mistral-local/deepseek-v4-1-flash-1017": {
+        "reserveTokens": 419430
+      },
+      "Mistral-local/glm-5.2": {
+        "reserveTokens": 419430
+      },
+      "Mistral-local/mistral-large": {
+        "reserveTokens": 419430
+      },
+      "Mistral-local/mistral-large-4": {
+        "reserveTokens": 419430
+      },
+      "Mistral-local/zai-glm-5-3": {
+        "reserveTokens": 419430
+      },
+      "Mistral-local/zai-glm-5-3-flash": {
+        "reserveTokens": 419430
+      },
+      "Mistral-local/labs-leanstral-1-5-1": {
+        "reserveTokens": 52428
+      },
+      "Mistral-local/magistral-medium-latest": {
+        "reserveTokens": 52428
+      },
+      "Mistral-local/mistral-medium-latest": {
+        "reserveTokens": 52428
+      },
+      "Mistral-local/mistral-small-2603": {
+        "reserveTokens": 52428
+      },
+      "Mistral-local/mistral-vibe-cli-with-tools": {
+        "reserveTokens": 52428
+      },
+      "Mistral-local/ministral-14b-2512": {
+        "reserveTokens": 0
+      },
+      "Mistral-local/ministral-8b-2512": {
+        "reserveTokens": 0
+      },
+      "Mistral-local/codestral-2508": {
+        "reserveTokens": 51199
+      },
+      "Mistral-local/ministral-3b-2512": {
+        "reserveTokens": 0
+      },
+      "Mistral-local/voxtral-small-2507": {
+        "reserveTokens": 0
+      }
+    },
+    "reserveTokens": 16384
+  },
+  "cacheWarming": "off",
+  "defaultModel": "zai-glm-5-3-flash",
+  "defaultProvider": "Mistral-local",
+  "defaultThinkingLevel": "medium",
+  "enableSkillCommands": true,
+  "enabledModels": [
+    "Mistral-local/deepseek-v4-1-flash-1017",
+    "Mistral-local/glm-5.2",
+    "Mistral-local/mistral-large",
+    "Mistral-local/mistral-large-4",
+    "Mistral-local/zai-glm-5-3",
+    "Mistral-local/zai-glm-5-3-flash",
+    "Mistral-local/labs-leanstral-1-5-1",
+    "Mistral-local/magistral-medium-latest",
+    "Mistral-local/mistral-medium-latest",
+    "Mistral-local/mistral-small-2603",
+    "Mistral-local/mistral-vibe-cli-with-tools",
+    "Mistral-local/ministral-14b-2512",
+    "Mistral-local/ministral-8b-2512",
+    "Mistral-local/codestral-2508",
+    "Mistral-local/ministral-3b-2512",
+    "Mistral-local/voxtral-small-2507",
+    "mistral/mistral-large-latest",
+    "mistral/mistral-medium-latest",
+    "mistral/mistral-small-latest",
+    "mistral/codestral-latest",
+    "mistral/zai-glm-5-3",
+    "mistral/zai-glm-5-2",
+    "mistral/glm-5-2",
+    "mistral/magistral-medium-latest",
+    "mistral/labs-leanstral-1-5-1",
+    "mistral/ministral-8b-latest",
+    "mistral/ministral-3b-latest",
+    "mistral/voxtral-small-latest"
+  ],
+  "deviceId": "a35933a7-7a49-439a-9864-f871bab71e53",
+  "enableInstallTelemetry": false,
+  "extensionChangelogVersions": {
+    "{\"source\":\"npm:@pi-kaush/pi-tool-call-markers\",\"scope\":\"user\"}": "0.3.20",
+    "{\"source\":\"npm:pi-image-view\",\"scope\":\"user\"}": "0.5.0",
+    "{\"source\":\"npm:pi-mcp-adapter\",\"scope\":\"user\"}": "7.0.1",
+    "{\"source\":\"npm:pi-web-access\",\"scope\":\"user\"}": "0.47.0",
+    "{\"source\":\"npm:pi-custom-providers\",\"scope\":\"user\"}": "0.4.3",
+    "{\"source\":\"npm:@indexyz/pi-custom-provider\",\"scope\":\"user\"}": "0.3.1"
+  },
+  "extensions": [
+    "-builtin:codemode",
+    "+builtin:tool-search",
+    "+builtin:mcp"
+  ],
+  "fullscreenCopyOnSelect": true,
+  "hideThinkingBlock": false,
+  "lastChangelogVersion": "1.5.2",
+  "packages": [
+    "npm:pi-web-access",
+    "npm:pi-btw",
+    "npm:odd-view",
+    {
+      "source": "git:github.com/oniricosistemas/mcp-sidebar",
+      "extensions": [
+        "+src/extension.ts"
+      ]
+    },
+    {
+      "source": "npm:pi-image-view",
+      "extensions": [
+        "+index.ts"
+      ]
+    },
+    "npm:@pi-kaush/pi-tool-call-markers",
+    "npm:gentle-engram@0.7.0",
+    "npm:pi-intercom"
+  ],
+  "showHardwareCursor": false,
+  "skills": [
+    "-skills/sdd-apply/SKILL.md",
+    "-skills/sdd-archive/SKILL.md",
+    "-skills/sdd-design/SKILL.md",
+    "-skills/sdd-explore/SKILL.md",
+    "-skills/sdd-init/SKILL.md",
+    "-skills/sdd-onboard/SKILL.md",
+    "-skills/_shared/sdd-orchestrator-sections.md",
+    "-skills/_shared/sdd-phase-common.md",
+    "-skills/sdd-propose/SKILL.md",
+    "-skills/sdd-research/SKILL.md",
+    "-skills/sdd-spec/SKILL.md",
+    "-skills/_shared/sdd-status-contract.md",
+    "-skills/sdd-tasks/SKILL.md",
+    "-skills/sdd-verify/SKILL.md",
+    "-skills/chrome-devtools/chrome-devtools/SKILL.md",
+    "-skills/chrome-devtools/chrome-devtools-cli/SKILL.md",
+    "-skills/sveltekit-svelte5-tailwind-skill/SKILL.md"
+  ],
+  "terminal": {
+    "clearOnShrink": false
+  },
+  "theme": "dark",
+  "tuiMode": "fullscreen"
+}

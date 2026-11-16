@@ -681,15 +681,25 @@ class Handler(BaseHTTPRequestHandler):
             chat_request = None
         if not isinstance(chat_request, dict):
             return self._reply(400, {"error": {"message": "invalid JSON body"}})
+        changed = False
         aliased_model = MODEL_ALIASES.get(str(chat_request.get("model")))
         if aliased_model:
             chat_request["model"] = aliased_model
+            changed = True
+        # Mistral's chat completions rejects "store" with 422 extra_forbidden,
+        # and its Responses API is stateless: store:false is accepted but
+        # store:true is refused with 400. OpenAI clients send either by default,
+        # so drop it here, before the /v1/responses path forwards the body
+        # untouched, and both routes accept the request.
+        if "store" in chat_request:
+            del chat_request["store"]
+            changed = True
+        if changed:
             body = json.dumps(chat_request).encode()
         stream = bool(chat_request.get("stream"))
         if self.path in RESPONSES_ROUTES:
             self._request_model = chat_request.get("model") or "unknown"
             return self._proxy_body(body, stream)
-        changed = False
         if stream and "stream_options" not in chat_request:
             # Without include_usage the final usage chunk never arrives, and
             # clients that bill tokens show zero for every response.
