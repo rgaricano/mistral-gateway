@@ -4,3 +4,11 @@ pool_state.*.tmp
 usage.db*
 __pycache__/
 *.pyc
+
+# Dashboard auth token: a live secret, never committed
+accounting/dashboard.token
+accounting/auth_fails.log
+
+# Hardware inventory: hostnames, disk usage and GPU details stay local
+accounting/hardware.local.json
+accounting/hardware.local.meta.json
