@@ -190,6 +190,77 @@ def test_spanish_formatter_covers_time_units():
         assert got == expected, f"REGLA #1: {raw!r} → {got!r}, se esperaba {expected!r}"
 
 
+# How much the report may lag the live reading before it counts as stale.
+# ~0,5 pp is a few minutes of work; anything more means it is not "today's report".
+FRESHNESS_PP = 0.5
+
+
+def test_daily_report_exists_for_today():
+    """The daily part of the subscription must exist for TODAY.
+
+    Fixed routine (Ricardo, 20-nov): at session start and/or end there must be a
+    report for the day, generated if missing. A routine that lives only in
+    memory is missed exactly on the busy days, which are the days the figure is
+    needed. This turns the routine into something the suite enforces.
+    """
+    import subprocess
+    here = Path(__file__).resolve().parent
+    today = date.today()
+    target = here / "informes" / f"{today.isoformat()}.md"
+    if not target.is_file():
+        # generate it, exactly as the routine says, then assert it worked
+        run = subprocess.run([sys.executable, str(here / "daily_report.py")],
+                             capture_output=True, text=True)
+        assert run.returncode == 0, f"daily_report.py falló: {run.stderr[:300]}"
+    assert target.is_file(), f"no hay parte diario de hoy: {target}"
+
+    text = target.read_text()
+    assert f"verified: {today.isoformat()}" in text, "el parte no está fechado hoy"
+
+    # Freshness, not exact equality: the quota moves continuously, so demanding an
+    # exact match would make this test unstable and force a rewrite on every call.
+    # The routine is "keep today's report current", so a stale report is refreshed
+    # the same way a missing one is created.
+    live = data.live_quota()
+    if live and live.get("percent") is not None:
+        live_pct = live["percent"]
+        reported = [float(m.replace(",", ".")) for m in
+                    __import__("re").findall(r"Cuota usada \| \*\*([\d,]+) %\*\*", text)]
+        assert reported, "el parte no declara la cuota usada"
+        drift = live_pct - reported[0]
+        assert drift >= -0.01, (
+            f"el parte dice {reported[0]} % pero la lectura viva es menor ({live_pct:.2f} %): "
+            "la cuota no decrece, el parte miente")
+        if drift > FRESHNESS_PP:
+            # Say it out loud: a test that silently repairs its own subject tells
+            # nobody that the routine had been missed.
+            print(f"  [rutina] parte desfasado ({reported[0]} % vs {live_pct:.2f} %): "
+                  f"se regenera", file=sys.stderr)
+            run = subprocess.run([sys.executable, str(here / "daily_report.py"), "--force"],
+                                 capture_output=True, text=True)
+            assert run.returncode == 0, f"no se pudo refrescar: {run.stderr[:200]}"
+            text = target.read_text()
+            reported = [float(m.replace(",", ".")) for m in
+                        __import__("re").findall(r"Cuota usada \| \*\*([\d,]+) %\*\*", text)]
+            assert live_pct - reported[0] <= FRESHNESS_PP, (
+                f"el parte sigue desfasado tras refrescar: {reported[0]} % vs {live_pct:.2f} %")
+
+
+def test_daily_report_has_no_english_decimals():
+    """REGLA #1 applies to the report too: 0.4 meses is a defect, not a detail."""
+    import re
+    here = Path(__file__).resolve().parent
+    reports = sorted((here / "informes").glob("*.md")) if (here / "informes").is_dir() else []
+    bad = []
+    for r in reports:
+        for line in r.read_text().splitlines():
+            # a decimal point between digits, followed by a unit
+            if re.search(r"\d+\.\d+\s*(€|%|pp|meses|mes|días|día|x)\b", line):
+                bad.append(f"{r.name}: {line.strip()[:70]}")
+    assert not bad, "decimales ingleses en el parte:\n" + "\n".join(bad)
+
+
+
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):
