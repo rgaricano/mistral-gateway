@@ -798,8 +798,16 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(body)
                 return
         if path_only.startswith("/fichas/"):
-            f = (Path(__file__).resolve().parent / self.path.lstrip("/"))
-            if f.is_file():
+            # PATH TRAVERSAL FIX (20-nov, found while looking at hosting a new
+            # subdirectory): this joined the RAW request path onto the project
+            # directory, so /fichas/../../gateway.py returned 200 and served any
+            # file the process can read. A server that grows more static paths
+            # would have multiplied the hole, so it is fixed before adding any.
+            base = (Path(__file__).resolve().parent / "fichas").resolve()
+            candidate = (base / path_only[len("/fichas/"):]).resolve()
+            inside = candidate == base or base in candidate.parents
+            f = candidate if inside else None
+            if f is not None and f.is_file():
                 body = f.read_bytes()
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
