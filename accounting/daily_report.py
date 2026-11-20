@@ -54,7 +54,10 @@ def build(today: date) -> str:
     price = data.SUBSCRIPTION_PRICE_EUR
 
     if quota is None:
-        raise SystemExit("sin lectura viva del presupuesto: no se inventa el parte")
+        # exit 1: refusing is a failure, not a success. A script that declines to
+        # do its job and still reports 0 breaks any caller automating the routine.
+        print("sin lectura viva del presupuesto: no se inventa el parte", file=sys.stderr)
+        raise SystemExit(1)
 
     pct = quota["percent"]
     used = pct / 100 * budget
