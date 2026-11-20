@@ -73,6 +73,31 @@ def test_absolute_path_is_refused():
     assert got is None or base in got.parents, f"ruta absoluta escapó: {got}"
 
 
+def test_boards_route_is_also_contained():
+    """The /boards/ route needs the same containment rule as /fichas/.
+
+    A new static subtree added without it would reintroduce the exact hole that
+    was just closed, and design boards are just as capable of naming ../../../etc.
+    """
+    from urllib.parse import unquote
+    here = Path(__file__).resolve().parent
+    base = (here / "boards").resolve()
+
+    def resolve(path_only: str):
+        candidate = (base / path_only[len("/boards/"):]).resolve()
+        return candidate if candidate == base or base in candidate.parents else None
+
+    for attack in ("boards/../data.py", "boards/../../gateway.py",
+                   "boards/%2e%2e/%2e%2e/gateway.py", "boards/../../../etc/passwd"):
+        got = resolve("/" + unquote(attack))
+        assert got is None, f"{attack} escapó a {got}"
+
+    src = (here / "web_dashboard.py").read_text()
+    boards_block = src.split('startswith("/boards/")')[1].split("elif")[0]
+    assert "base in candidate.parents" in boards_block, \
+        "la ruta /boards/ no comprueba contención por ruta resuelta"
+
+
 def test_legitimate_fichas_still_serve():
     """The fix must not break the real pages (a guard that blocks everything is useless)."""
     real = sorted(p.name for p in (HERE / "fichas").glob("*.html"))

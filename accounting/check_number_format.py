@@ -26,6 +26,11 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 SKIP_DIRS = {"__pycache__", ".git"}
+# Copies of OTHER owners' artefacts (design boards from PINTO). They are markup
+# with CSS values like rgb(240 149 200 / 0.12): not OUR figures, and rewriting
+# them to Spanish decimals would corrupt someone else's design. We serve them, we
+# do not author them.
+SKIP_DIRS |= {"boards"}
 
 # Numbers that legitimately contain dots and are NOT decimals.
 EXEMPT_PATTERNS = [

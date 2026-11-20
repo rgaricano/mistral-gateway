@@ -816,6 +816,29 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(body)
             else:
                 self.send_error(404)
+        elif path_only.startswith("/boards/"):
+            # Static design boards from PINTO, COPIED here rather than served from
+            # her worktree: a half-finished edit or a git checkout there must not
+            # change what Ricardo is looking at mid-review.
+            base = (Path(__file__).resolve().parent / "boards").resolve()
+            candidate = (base / path_only[len("/boards/"):]).resolve()
+            inside = candidate == base or base in candidate.parents
+            f = candidate if inside else None
+            if f is not None and f.is_file():
+                ctype = "image/svg+xml" if f.suffix == ".svg" else "text/html; charset=utf-8"
+                body = f.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", ctype)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+            elif path_only in ("/boards", "/boards/") and (base / "index.html").is_file():
+                # the bare prefix should land on the index, not 404
+                self.send_response(302)
+                self.send_header("Location", "/boards/index.html")
+                self.end_headers()
+            else:
+                self.send_error(404)
         elif path_only == "/mapa-completo.html":
             body = (Path(__file__).resolve().parent / "mapa_completo.html").read_bytes()
             self.send_response(200)
