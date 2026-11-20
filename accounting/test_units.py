@@ -84,8 +84,15 @@ def test_series_ends_today_with_live_value():
     assert last_day == date.today().isoformat(), (
         f"series ends on {last_day}, not today, although a live reading is "
         f"available — the dashboard would show stale data")
-    assert abs(last_pct - live["percent"]) < 0.01, (
-        f"series ends at {last_pct} % but the live budget reads {live['percent']:.2f} %")
+    # Tolerance, not equality: the quota advances while the test runs, so a
+    # second live read can already be a few hundredths higher than the value the
+    # series captured moments earlier. Demanding < 0.01 made the suite fail on a
+    # race, not on a defect. Two calls ~1s apart cannot legitimately differ by
+    # more than a fraction of a point; a stale series differs by whole points.
+    drift = live["percent"] - last_pct
+    assert -0.01 <= drift <= 0.2, (
+        f"series ends at {last_pct} % but the live budget reads {live['percent']:.2f} % "
+        f"(drift {drift:+.2f} pp) — either stale or reading a different source")
 
 
 def test_plan_uses_live_reading_not_stale_series():
@@ -301,6 +308,90 @@ def test_report_wording_agrees_with_the_numbers():
             if re.search(r"(?<![\d,.])(2|3|4|5|6|7|8|9|\d\d+)\s+(día|mes)\b", line):
                 bad.append(f"{r.name}: {line.strip()[:90]}")
     assert not bad, "concordancia singular/plural rota:\n" + "\n".join(bad)
+
+
+def test_static_site_is_current_and_coherent():
+    """The publishable tree must be current, script-free and link-coherent.
+
+    The tree in `gentle-companion/docs/accounting/` is what gets published, and
+    until now it was built by hand with ad-hoc commands — so it silently served
+    figures from hours earlier (20,40 % published while the live reading was
+    23,36 %). A site that shows yesterday as today is the same defect as the
+    stale allowance series, in a different costume.
+
+    Freshness is bounds-checked, not compared exactly: the quota moves
+    continuously and an exact match would make this test unstable. When stale it
+    rebuilds and says so.
+    """
+    import re
+    import subprocess
+    here = Path(__file__).resolve().parent
+    site = Path.home() / "Trabajo" / "IAI" / "gentle-companion" / "docs" / "accounting"
+    if not site.is_dir():
+        return  # the publishable tree is not present in this checkout
+
+    index = site / "index.html"
+    live = data.live_quota()
+    has_live = live is not None and live.get("percent") is not None
+
+    def published_pct() -> float | None:
+        if not index.is_file():
+            return None
+        found = re.search(r"\*\*?([\d,]+) %\*\*? = ", index.read_text())
+        if not found:
+            found = re.search(r"[^\d,]([\d,]+) % = ", index.read_text())
+        return float(found.group(1).replace(",", ".")) if found else None
+
+    stale = False
+    if has_live:
+        shown = published_pct()
+        if shown is None:
+            stale = True
+        elif abs(live["percent"] - shown) > FRESHNESS_PP:
+            stale = True
+
+    if stale or not index.is_file():
+        if not has_live:
+            return  # cannot rebuild without a live read, by design
+        print("  [rutina] sitio estático desfasado: se regenera", file=sys.stderr)
+        run = subprocess.run([sys.executable, str(here / "build_static_site.py")],
+                             capture_output=True, text=True)
+        assert run.returncode == 0, f"build_static_site.py falló: {run.stderr[:400]}"
+
+    text = index.read_text()
+    # zero scripts, zero external chart dependencies
+    assert "<script" not in text, "el sitio publicado contiene <script>"
+    assert not re.search(r"https?://(cdn|cdnjs|unpkg|plotly)", text), \
+        "el sitio publicado depende de un CDN para los gráficos"
+
+    # the charts are real images carrying their own provenance
+    from PIL import Image
+    for name in ("chart-1.png", "chart-2.png", "chart-3.png"):
+        chart = site / name
+        assert chart.is_file(), f"falta {name} en el sitio publicado"
+        assert "OKF-METADATA" in (Image.open(chart).info or {}), \
+            f"{name} no lleva su OKF embebido"
+
+    # the generated tree must not carry a manifest of itself: its hashes would be
+    # stale the moment the site is rebuilt, and it labelled .md/.html as "en frames"
+    assert not (site / "OKF-MANIFEST.md").is_file(), (
+        "el árbol publicado lleva un OKF-MANIFEST.md de sí mismo: nace obsoleto")
+
+    # every local reference resolves (this caught 63 dead links in one build)
+    import os
+    dead = []
+    for root, _, files in os.walk(site):
+        for f in files:
+            if not f.endswith(".html"):
+                continue
+            page = Path(root) / f
+            for ref in re.findall(r'(?:src|href)="([^"#][^"]*)"', page.read_text()):
+                if ref.startswith(("http", "mailto")):
+                    continue
+                target = (Path(root) / ref.split("#")[0]).resolve()
+                if not target.exists():
+                    dead.append(f"{page.relative_to(site)} → {ref}")
+    assert not dead, f"enlaces rotos en el sitio publicado: {dead[:5]}"
 
 
 if __name__ == "__main__":

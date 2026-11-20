@@ -97,6 +97,29 @@ manifiesto** (`_note`, `_manifest`, `_row`) en vez de decir «sin cabecera». De
 no hay cabecera cuando sí la hay es un falso negativo, y un falso negativo es como se
 pierde la confianza en una herramienta.
 
+
+## Publicar el árbol estático (un comando)
+
+El árbol de `gentle-companion/docs/accounting/` es **salida generada**, no fuente.
+Se regenera entero con:
+
+```bash
+python3 accounting/build_static_site.py
+```
+
+Genera `index.html` (sin JS, sin CDN), los tres gráficos PNG con su OKF embebido,
+las 26 fichas con enlaces relativos, la ficha ampliada del crédito fiscal, la
+página de navegación y el favicon. Todas las cifras salen de la lectura viva; si
+no hay lectura viva se niega a publicar una cifra inventada.
+
+**Y se comprueba solo.** `test_units.py` incluye una prueba que exige que el sitio
+publicado esté fresco, sin `<script>`, sin dependencias de CDN, con OKF en cada
+gráfico y **sin un solo enlace roto**. Si está desfasado, lo regenera y lo dice
+por stderr.
+
+Antes esto se hacía a mano y por eso el sitio llegó a publicar 20,40 % cuando la
+cifra real era 23,36 %: nadie se dio cuenta porque nada lo comprobaba.
+
 ## Las tres capas (para binarios)
 
 Los binarios no admiten todos la misma cabecera, así que la solución tiene capas

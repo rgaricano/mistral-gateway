@@ -287,7 +287,8 @@ def write_okf(path: Path, meta: dict, *, dry_run: bool = False) -> str:
     return f"{kind} → cabecera {action}"
 
 
-def stamp_binary(path: Path, meta: dict, *, dry_run: bool = False) -> str:
+def stamp_binary(path: Path, meta: dict, *, dry_run: bool = False,
+                 update_manifest: bool = True) -> str:
     """Embebe el OKF en un binario (capa 1) y actualiza el manifiesto (capa 2)."""
     payload = _emit_yaml(meta)
     suffix = path.suffix.lower()
@@ -317,8 +318,12 @@ def stamp_binary(path: Path, meta: dict, *, dry_run: bool = False) -> str:
     else:
         raise SystemExit(f"binario no soportado para estampado: {suffix}")
 
-    regenerate_manifest(path)
-    return result + " + manifiesto actualizado"
+    if update_manifest:
+        regenerate_manifest(path)
+        return result + " + manifiesto actualizado"
+    # Generated output trees have no manifest: an index hashing files that this
+    # same run rewrites is stale on arrival.
+    return result
 
 
 def regenerate_manifest(target: Path | None = None) -> int:
