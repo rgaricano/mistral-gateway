@@ -70,12 +70,22 @@ def test_series_ends_today_with_live_value():
     series = data.allowance_series()
     assert series, "empty allowance series"
     last_day, last_pct = series[-1]
-    assert last_day == date.today().isoformat(), (
-        f"series ends on {last_day}, not today — dashboard would show stale data")
+
     live = data.live_quota()
-    if live and live.get("percent") is not None:
-        assert abs(last_pct - live["percent"]) < 0.01, (
-            f"series ends at {last_pct} % but the live budget reads {live['percent']:.2f} %")
+    if live is None or live.get("percent") is None:
+        # No live reading (no credentials, e.g. a fresh clone or CI). The series
+        # can only carry the recorded history, so a series ending earlier is the
+        # honest state, not a defect. What must NOT happen is pretending: the
+        # value stays as recorded and the caller can see there is no live point.
+        assert last_day <= date.today().isoformat(), (
+            f"series ends in the future ({last_day}) — that cannot be a measurement")
+        return
+
+    assert last_day == date.today().isoformat(), (
+        f"series ends on {last_day}, not today, although a live reading is "
+        f"available — the dashboard would show stale data")
+    assert abs(last_pct - live["percent"]) < 0.01, (
+        f"series ends at {last_pct} % but the live budget reads {live['percent']:.2f} %")
 
 
 def test_plan_uses_live_reading_not_stale_series():
