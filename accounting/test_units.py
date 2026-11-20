@@ -278,6 +278,31 @@ def test_daily_report_has_no_english_decimals():
 
 
 
+def test_report_wording_agrees_with_the_numbers():
+    """Singular/plural must agree with the number actually printed.
+
+    Real defect (20-nov): the word was computed from the signed margin while the
+    sentence printed abs(margin), so a margin of -1 rendered "se agota 1 días
+    ANTES". A reader who spots "1 días" has reason to doubt every other figure in
+    the same table, which is why this is worth a test and not a typo fix.
+    """
+    import re
+    import daily_report
+    here = Path(__file__).resolve().parent
+    reports = sorted((here / "informes").glob("*.md"))
+    assert reports, "no hay informes que validar"
+    bad = []
+    for r in reports:
+        for line in r.read_text().splitlines():
+            # a numeral 1 (or -1) immediately followed by a plural time unit
+            if re.search(r"(?<![\d,.])1\s+(días|meses)\b", line):
+                bad.append(f"{r.name}: {line.strip()[:90]}")
+            # and the reverse: a plural-looking number with a singular noun
+            if re.search(r"(?<![\d,.])(2|3|4|5|6|7|8|9|\d\d+)\s+(día|mes)\b", line):
+                bad.append(f"{r.name}: {line.strip()[:90]}")
+    assert not bad, "concordancia singular/plural rota:\n" + "\n".join(bad)
+
+
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):

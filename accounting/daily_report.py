@@ -113,12 +113,15 @@ def build(today: date) -> str:
     lines.append(f"| Ritmo requerido al reset | {es_num(plan['required_pts_day'])} pp/día |")
     if runway is not None:
         margin = runway - plan["days_left"]
-        # singular/plural and REGLA #1 decimal comma both matter here: "1 días" and
-        # "0.4 meses" are the kind of slip that makes a reader distrust the figures.
-        day_word = "día" if round(margin) == 1 else "días"
+        # The word must agree with the number ACTUALLY printed, not with the signed
+        # value: computing it from `margin` while printing `abs(margin)` produced
+        # "se agota 1 días ANTES". Both branches now derive it from the exact
+        # integer that goes in the sentence.
+        shown = round(abs(margin))
+        day_word = "día" if shown == 1 else "días"
         verdict = ("margen sobre el reset: "
-                   + (f"**{round(margin)} {day_word}**" if margin >= 0
-                      else f"**se agota {round(abs(margin))} {day_word} ANTES**"))
+                   + (f"**{shown} {day_word}**" if margin >= 0
+                      else f"**se agota {shown} {day_word} antes del reset**"))
         lines.append(f"| Agotamiento al ritmo actual | {runway:.0f} días "
                      f"({es_num(runway / 30, 1)} meses) · {verdict} |")
     lines.append(f"| Escalas | 1 pp = {es_num(budget / 100)} € de presupuesto = {es_num(eur_point, 4)} € de suscripción |")
