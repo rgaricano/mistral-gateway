@@ -160,13 +160,25 @@ def daily_allowance_delta(series: list[tuple[str, float]]) -> list[tuple[str, fl
 
 
 def daily_tokens() -> list[dict]:
-    """Per day totals from usage.db: requests, tokens (uncached+cached+completion)."""
-    with sqlite3.connect(USAGE_DB) as cx:
-        rows = cx.execute(
-            "SELECT day, sum(requests), sum(prompt_tokens - cached_tokens),"
-            " sum(cached_tokens), sum(completion_tokens)"
-            " FROM usage GROUP BY day ORDER BY day"
-        ).fetchall()
+    """Per day totals from usage.db: requests, tokens (uncached+cached+completion).
+
+    Returns [] when usage.db is absent or has no data yet. usage.db holds real
+    personal usage and is deliberately NOT committed, so a fresh clone has no
+    such file: raising there made the whole suite fail on any machine but the
+    author's, which is how a "green locally" check becomes worthless.
+    """
+    if not USAGE_DB.is_file():
+        return []
+    try:
+        with sqlite3.connect(USAGE_DB) as cx:
+            rows = cx.execute(
+                "SELECT day, sum(requests), sum(prompt_tokens - cached_tokens),"
+                " sum(cached_tokens), sum(completion_tokens)"
+                " FROM usage GROUP BY day ORDER BY day"
+            ).fetchall()
+    except sqlite3.OperationalError:
+        # database exists but was never populated (no table): no data, not a crash
+        return []
     return [
         {
             "day": day,
