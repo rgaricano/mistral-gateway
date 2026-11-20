@@ -61,7 +61,16 @@ def is_thousands_group(tok: str) -> bool:
 
 def scan(text: str):
     problems = []
+    # Fenced code blocks are QUOTED DATA, not figures we authored: a JSON payload
+    # from the provider, a command's real output. Rewriting those to Spanish
+    # decimals would falsify the evidence. Track whether we are inside one.
+    in_fence = False
     for n, line in enumerate(text.splitlines(), 1):
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
         for m in DECIMAL_RE.finditer(strip_exempt(line)):
             tok = m.group(1)
             if is_thousands_group(tok):
