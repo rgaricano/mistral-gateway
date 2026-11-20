@@ -1,0 +1,203 @@
+"""Regression checks for the quota-unit conversion.
+
+Guards the bug found 19-nov-2026: euro_per_quota_point() divided 18,14 by the
+euro budget (255) while the plan's `pts` are PERCENTAGE points (0-100), which
+reported every "EUR of subscription per day" figure 2,55x too low.
+Run: python3 accounting/test_units.py
+"""
+# OKF-METADATA
+# ---
+# type: Test
+# title: "Guard de unidades cuota↔€"
+# description: "Verifica que 1 pp equivale al precio/100 y no al precio/255, y que el plan y la anotación usan la misma escala."
+# status: draft
+# generated: 2026-11-20T00:51:26+01:00
+# source:
+# - "accounting/data.py"
+# verified: 2026-11-20
+# stale_after: 2027-06-30
+# ---
+import sys
+from datetime import date
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import data
+
+PRICE = data.SUBSCRIPTION_PRICE_EUR      # 18,14
+BUDGET = data.BUDGET_EUR                 # 255.0
+
+
+def test_point_is_percentage_scale():
+    """1 pp must equal 1% of the budget in subscription terms."""
+    expected = PRICE * (1.0 / 100.0)     # 18,14 / 100
+    actual = data.euro_per_quota_point()
+    assert abs(actual - expected) < 1e-9, f"{actual} != {expected} (wrong divisor again?)"
+    # and it must NOT be the old, wrong value
+    assert abs(actual - PRICE / BUDGET) > 1e-6, "regressed to dividing by the euro budget"
+
+
+def test_full_cycle_conversion_is_consistent():
+    """100 pp of quota must map to exactly the subscription price."""
+    assert abs(100 * data.euro_per_quota_point() - PRICE) < 1e-6
+
+
+def test_plan_fields_use_the_same_scale():
+    plan = data.load_plan()
+    eur_per_pp = data.euro_per_quota_point()
+    for key in ("required_eur_day", "suggested_eur_day", "required_pts_day", "suggested_pts_day"):
+        assert key in plan, f"missing {key} in load_plan()"
+    # required_eur_day must be required_pts_day * eur_per_pp (same scale end to end)
+    assert abs(plan["required_eur_day"] - plan["required_pts_day"] * eur_per_pp) < 1e-6
+
+
+def test_annotation_is_generated_not_hardcoded():
+    """The chart annotation must be built from the value, never a literal 18,14/255."""
+    src = (Path(__file__).resolve().parent / "web_dashboard.py").read_text()
+    assert "18,14 € / 255 €" not in src, "hardcoded unit text reintroduced"
+    assert "EUR_PER_POINT:.4f" in src, "annotation no longer interpolates the computed value"
+
+
+def test_series_ends_today_with_live_value():
+    """The allowance series must end on today and with the live reading.
+
+    A hand-written series is a cache with no expiry: on 20-nov the series stopped
+    at 19-nov/15,45 % while the live budget read 18,58 %, so the dashboard showed
+    yesterday's figure as today's. A guard that only checks 'the chart has points'
+    would have passed. This one checks that the last point IS today and that its
+    value IS the live read.
+    """
+    series = data.allowance_series()
+    assert series, "empty allowance series"
+    last_day, last_pct = series[-1]
+    assert last_day == date.today().isoformat(), (
+        f"series ends on {last_day}, not today — dashboard would show stale data")
+    live = data.live_quota()
+    if live and live.get("percent") is not None:
+        assert abs(last_pct - live["percent"]) < 0.01, (
+            f"series ends at {last_pct} % but the live budget reads {live['percent']:.2f} %")
+
+
+def test_plan_uses_live_reading_not_stale_series():
+    """plan['current_pct'] must track the live read, not a stale series tail."""
+    plan = data.load_plan()
+    live = data.live_quota()
+    if live and live.get("percent") is not None:
+        assert abs(plan["current_pct"] - live["percent"]) < 0.01, (
+            f"plan says {plan['current_pct']} % but live budget says {live['percent']:.2f} %")
+
+
+def test_exhaustion_is_in_days_not_budget_suscription_mix():
+    """Runway must be computed on ONE euro scale, never mixing the two.
+
+    Real defect (21-nov, spotted by Ricardo): the dashboard reported "agotamiento
+    al ritmo reciente: 7,6 meses" when the truth was 16 days. The line divided
+    free euros of BUDGET (255 €) by a pace in SUBSCRIPTION euros (18,14 €), which
+    silently scales the result by BUDGET/PRICE = 14,06x.
+
+    A guard that only checked "the number is positive" or "it is < 12 months"
+    would pass the wrong value. This one checks the invariants that make the
+    figure meaningful: the pp form and the euro form must agree exactly, and the
+    result must be days of remaining allowance at that pace.
+    """
+    plan = data.load_plan()
+    pct = plan["current_pct"]
+    pace = plan["recent_pts_day"]
+    days = data.days_until_exhausted(pct, pace)
+    assert days is not None, "sin ritmo medible debería devolver None, no 0 ni inf"
+    assert days > 0, f"agotamiento no positivo: {days}"
+
+    # (a) the percentage-point form and the budget-euro form MUST agree.
+    #     If someone divides by the subscription euro per point instead, this breaks.
+    free_budget_eur = (100 - pct) / 100 * data.BUDGET_EUR
+    euro_form = free_budget_eur / (pace * data.budget_eur_per_quota_point())
+    assert abs(days - euro_form) < 1e-9, (
+        f"las dos formas discrepan: pp={days:.4f} días vs €={euro_form:.4f} días "
+        f"(factor {days / euro_form:.2f}x — ¿se mezclaron las escalas?)")
+
+    # (b) the subscription-euro form gives the WRONG value: it must NOT match,
+    #     which is the whole point. This pins the bug rather than forgetting it.
+    wrong = free_budget_eur / (pace * data.euro_per_quota_point())
+    factor = data.BUDGET_EUR / data.SUBSCRIPTION_PRICE_EUR
+    assert abs(wrong / days - factor) < 0.01, (
+        f"el error conocido debería ser {factor:.2f}x, se midió {wrong / days:.2f}x")
+
+
+def test_two_euro_scales_are_explicit():
+    """The two euro-per-point scales must both exist and differ by BUDGET/PRICE."""
+    sub = data.euro_per_quota_point()
+    budget = data.budget_eur_per_quota_point()
+    assert sub != budget, "las dos escalas no pueden ser el mismo número"
+    assert abs((budget / sub) - (data.BUDGET_EUR / data.SUBSCRIPTION_PRICE_EUR)) < 1e-9, \
+        f"el cociente entre escalas no es BUDGET/PRICE: {budget / sub}"
+    assert abs(budget - data.BUDGET_EUR / 100) < 1e-12, "budget_eur_per_quota_point != 255/100"
+
+
+def test_web_dashboard_does_not_mix_scales():
+    """The rendered source must not divide budget euros by subscription euros.
+
+    The bug lived in an f-string, where no type checker or unit test reaches.
+    This pins the shape of the expression: the runway must come from
+    days_until_exhausted(), not from a free_eur / (...) division.
+    """
+    src = (Path(__file__).resolve().parent / "web_dashboard.py").read_text()
+    assert "data.days_until_exhausted(" in src, \
+        "el dashboard dejó de usar la función con nombre para el agotamiento"
+    # Only look at CODE, not comments: the comment explaining the old bug quotes
+    # the very expression we forbid, and a guard that fires on its own
+    # documentation is a guard that will be deleted in frustration.
+    code_lines = [ln for ln in src.splitlines() if not ln.lstrip().startswith("#")]
+    code = "\n".join(code_lines)
+    assert "free_eur / (rec_pts * EUR_PER_POINT)" not in code, \
+        "volvió la división que mezcla € de presupuesto con € de suscripción (14,06x)"
+
+
+def test_runway_is_not_wildly_off_from_the_reset():
+    """Sanity: at the recent pace the runway must be the same order as the cycle.
+
+    This is the check that would have caught 7,6 months at a glance: the cycle is
+    days, not months, so a runway of months means a unit error somewhere.
+    """
+    plan = data.load_plan()
+    days = data.days_until_exhausted(plan["current_pct"], plan["recent_pts_day"])
+    if days is None:
+        return
+    assert days < 365, f"agotamiento de {days:.0f} días: demasiado para un ciclo de ~17-30 días"
+    months = days / 30
+    assert months < 12, f"agotamiento de {months:.1f} meses: huele a mezcla de escalas"
+
+
+def test_spanish_formatter_covers_time_units():
+    """REGLA #1: a figure followed by meses/días must also use decimal comma.
+
+    Real leak (21-nov): the formatter only converted numbers before €, %, pp, x,
+    so "(0.5 meses)" shipped with an English decimal point straight into the
+    dashboard. The rule is about EVERY published figure, not only money.
+    """
+    import web_dashboard as w
+    cases = {
+        "(0.5 meses)": "(0,5 meses)",
+        "16 días": "16 días",
+        "1.5 días": "1,5 días",
+        "7.6 meses": "7,6 meses",
+        "18.14 €": "18,14 €",
+        "7.24 %": "7,24 %",
+        "255.000 €": "255.000 €",          # already Spanish thousands: keep
+        "0.1814 €": "0,1814 €",
+    }
+    for raw, expected in cases.items():
+        got = w._es_numbers(raw)
+        assert got == expected, f"REGLA #1: {raw!r} → {got!r}, se esperaba {expected!r}"
+
+
+if __name__ == "__main__":
+    failures = 0
+    for name, fn in sorted(globals().items()):
+        if name.startswith("test_") and callable(fn):
+            try:
+                fn()
+                print(f"PASS {name}")
+            except AssertionError as exc:
+                failures += 1
+                print(f"FAIL {name}: {exc}")
+    sys.exit(1 if failures else 0)
