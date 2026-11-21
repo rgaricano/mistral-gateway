@@ -53,6 +53,24 @@ Aviso aprendido de PINTO: su primer sondeo dio un desajuste falso porque buscaba
 hash es una afirmación sobre una comparación, y la comparación misma puede ser lo
 que está roto.**
 
+
+### Precondición del hash del cuerpo (señalada por PINTO, 21-nov)
+
+Comparar el cuerpo solo prueba lo que dice probar **mientras haya exactamente un
+añadido antes de `<!doctype`**: la cabecera OKF que pone el copiador.
+
+Si algún día un segundo implicado estampa algo más arriba —otra cabecera, una
+marca de revisión, un comentario de otra herramienta— la comparación **seguiría
+pasando** y estaría comparando un tramo distinto. Es un fallo silencioso, que es
+la peor clase: el hash coincide y ya no significa lo mismo.
+
+Precondición, por tanto: **un solo bloque antes del doctype, y lo pone el
+copiador.** Si eso cambia, cambia también el punto de anclaje de la comparación.
+
+Comprobación: el cuerpo debe empezar exactamente por `<!doctype` tras retirar
+**un** bloque. Si tras retirarlo no empieza por ahí, hay más de un añadido y el
+hash ya no es comparable.
+
 ## Reglas para añadir un tablero
 
 - Solo ficheros **autocontenidos**: 0 referencias externas, sin CDN.
