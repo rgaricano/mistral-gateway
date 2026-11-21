@@ -93,6 +93,23 @@ peor que no tenerla.
 **Regla que evita repetirlo:** cuando un hash no cuadra, **sospecha del
 procedimiento antes que del fichero.** Así se encontró este.
 
+
+### Cómo se compara (y cómo no)
+
+**Hashea los dos lados con el mismo comando, en la misma tubería.**
+
+Dos incidentes reales, ambos de comparación y ninguno de datos:
+
+- Buscar `<!DOCTYPE` en mayúsculas en un fichero que empieza en minúsculas → el
+  índice devuelve -1 y se corta basura.
+- Hashear un lado con `printf '%s'` (que **elimina el salto de línea final**) y el
+  otro con `md5sum` → tres ficheros idénticos reportados como distintos.
+
+Dos procedimientos de hash distintos no son una comprobación más débil: **son otra
+pregunta.** `curl | md5sum` en ambos lados es una comparación; uno con `printf` y
+otro con `md5sum` es una resta de cosas distintas que casualmente devuelve texto
+con forma de resultado.
+
 ## Reglas para añadir un tablero
 
 - Solo ficheros **autocontenidos**: 0 referencias externas, sin CDN.
