@@ -221,3 +221,57 @@ anteriores en silencio. Una prueba de humo habría pasado las dos.
 
 Si el formato **no** permite leer el texto de vuelta, no se finge que sí: va al
 manifiesto y se documenta la limitación. Ese fue el caso del ICO.
+
+## Credenciales: por qué la herramienta se niega a escribirlas
+
+Regla del equipo (Ricardo, 21-nov): **una credencial nunca va en un documento ni
+en una conversación.** Se guarda en un env fuera de control de versiones (modo
+600) o en el almacén de secretos, y se **referencia por ubicación, nunca por
+valor**.
+
+`okf.py` acepta valores libres por `--set`, lo que lo convierte exactamente en la
+herramienta capaz de estampar una contraseña en un documento, con cabecera
+correcta y guard en verde, y entregársela a git. Eso no es una capacidad neutra:
+es un arma cargada en una habitación donde la gente tiene prisa.
+
+**Dos comprobaciones, y la segunda es la que importa:**
+
+1. **Campo con nombre de credencial** — `api_key`, `apikey`, `token`, `secret`,
+   `password`, `passwd`, `contraseña`, `private_key`, `access_key`,
+   `client_secret`, `bearer`. Su valor debe ser una **referencia de ubicación**:
+   `env:VAR`, `file:RUTA`, `vault:…` o una ruta absoluta.
+
+2. **Forma del valor, sea cual sea el nombre del campo** — una cadena
+   alfanumérica continua de **24 caracteres o más**, con al menos un dígito y una
+   letra, se rechaza aunque el campo se llame `note`. Una contraseña en un campo
+   llamado `note` sigue siendo una contraseña.
+
+Por qué 24: por debajo, los falsos positivos ahogan el guard (rutas, títulos,
+identificadores de una palabra); por encima, deja de haber texto humano normal
+que coincida. Es un umbral empírico, no una garantía: **el guard es el suelo, no
+la prueba.**
+
+**Códigos de salida, y por qué son tres:**
+
+| Código | Significado |
+|---|---|
+| `0` | escrito |
+| `1` | fallo de E/S (no existe el fichero, no se puede leer) |
+| `2` | **rechazado por política** (credencial, u otra regla) |
+
+Un `1` y un `2` distintos permiten que quien llama sepa si reintentar, corregir o
+parar. Si solo se comprueba «distinto de cero», un rechazo y un disco lleno son
+lo mismo.
+
+### Y la lección de dónde va el guard
+
+La primera versión puso la comprobación **solo en `main()`**. El CLI rechazaba y
+la **librería no**: `stamp_binary(p, {"api_key": "sk-…"})` escribía el secreto sin
+protestar, y `build_static_site.py` llama exactamente a esa función. El agujero
+estaba vivo en nuestro propio árbol.
+
+**Un guard en el punto de entrada es una puerta, no una cerradura.** Toda función
+que escriba tiene que comprobarlo ella misma; el CLI solo traduce el fallo a un
+código de salida estable. Cubierto por
+`test_okf_tool.py::test_secret_guard_covers_the_library_not_only_the_cli`, y
+verificado restaurando el guard solo en `main()` y viendo la prueba fallar.

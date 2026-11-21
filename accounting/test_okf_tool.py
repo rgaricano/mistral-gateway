@@ -284,6 +284,46 @@ def test_a_directory_target_is_its_own_assets_dir():
     assert _okf.assets_dir_for(img / "a.png") == img, "la ruta del fichero no resolvió a su carpeta"
 
 
+def test_secret_guard_covers_the_library_not_only_the_cli():
+    """The credential refusal must live in the writers, not in main().
+
+    Real defect (21-nov, found by ORQ asking about exit codes): the check was only
+    in main(), so the CLI refused and the LIBRARY did not. Any code calling
+    stamp_binary directly — build_static_site.py does — walked straight past it. A
+    guard at the entry point is a door, not a lock.
+    """
+    from PIL import Image
+    root = _scratch()
+    png = root / "s.png"
+    Image.new("RGBA", (8, 8), (1, 1, 1, 255)).save(png)
+
+    cases = [
+        {"type": "I", "title": "t", "api_key": "sk-abc123"},                 # named field
+        {"type": "I", "title": "t", "note": "aB3xK9mP2qR7tY4wZ8nC5vB1xL6kJ3hG"},  # value shape
+    ]
+    for meta in cases:
+        try:
+            okf.stamp_binary(png, dict(meta))
+        except ValueError:
+            continue
+        raise AssertionError(f"la librería escribió un secreto: {meta}")
+        # a refusal that is not an exception would silently succeed here
+
+    # md (write_okf) must refuse too
+    md = root / "s.md"
+    md.write_text("# x\n")
+    try:
+        okf.write_okf(md, {"type": "T", "title": "t", "token": "abcdef123456789012345678"})
+        raise AssertionError("write_okf escribió un token")
+    except ValueError:
+        pass
+    assert "token" not in md.read_text(), "el token llegó al fichero"
+
+    # and a legitimate location reference must still work
+    okf.write_okf(md, {"type": "T", "title": "t", "api_key": "env:MY_KEY"})
+    assert "env:MY_KEY" in md.read_text()
+
+
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):

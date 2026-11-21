@@ -198,6 +198,11 @@ def read_okf(path: Path) -> dict | None:
         payload = (Image.open(path).info or {}).get("OKF-METADATA")
         return _parse_yaml(payload) if payload else None
     if suffix in BINARY_WRITEONLY:
+        # WebP/JPEG are stamped by sidecar, so the sibling is the reader.
+        sidecar = path.with_suffix(f"{suffix}.meta.json")
+        if sidecar.is_file():
+            import json as _json
+            return _json.loads(sidecar.read_text())
         # Está dentro del fichero, pero la API estándar no lo devuelve: se lee del
         # manifiesto. Decirlo es mejor que devolver None y fingir que no existe.
         local_manifest = manifest_for(path)
@@ -241,6 +246,7 @@ def _block_for(kind: str, meta: dict) -> str:
 
 def write_okf(path: Path, meta: dict, *, dry_run: bool = False) -> str:
     """Escribe (o reemplaza) la cabecera OKF. Devuelve una línea de resultado."""
+    _assert_no_secrets(dict(meta))
     meta = dict(meta)
     now = datetime.now().astimezone().replace(microsecond=0)
     meta.setdefault("generated", now.isoformat())
@@ -290,6 +296,7 @@ def write_okf(path: Path, meta: dict, *, dry_run: bool = False) -> str:
 def stamp_binary(path: Path, meta: dict, *, dry_run: bool = False,
                  update_manifest: bool = True) -> str:
     """Embebe el OKF en un binario (capa 1) y actualiza el manifiesto (capa 2)."""
+    _assert_no_secrets(dict(meta))
     payload = _emit_yaml(meta)
     suffix = path.suffix.lower()
     try:
@@ -316,7 +323,18 @@ def stamp_binary(path: Path, meta: dict, *, dry_run: bool = False,
         image.save(path, sizes=[(64, 64), (48, 48), (32, 32), (16, 16)], pnginfo=info)
         result = "ico → iTXt en los frames (la API estándar no lo relee: manda el manifiesto)"
     else:
-        raise SystemExit(f"binario no soportado para estampado: {suffix}")
+        # WebP/JPEG carry EXIF/XMP, but Pillow's write path for a custom chunk is
+        # not something to guess at. Rather than refuse with a dead end, fall back
+        # to the sidecar — the same mechanism already defined for .json — so the
+        # caller gets working metadata instead of an error and an undocumented task.
+        sidecar = path.with_suffix(f"{suffix}.meta.json")
+        if not dry_run:
+            import json as _json
+            sidecar.write_text(_json.dumps({k: (v if not isinstance(v, tuple) else list(v))
+                                            for k, v in meta.items()},
+                                           indent=2, ensure_ascii=False) + "\n")
+        return (f"{suffix} → hermano {sidecar.name} "
+                f"(iTXt no implementado para este formato; el sidecar es la capa 1)")
 
     if update_manifest:
         regenerate_manifest(path)
@@ -396,6 +414,24 @@ SECRET_KEY_RE = re.compile(
 # High-entropy strings that look like a generated credential rather than prose.
 SECRET_VALUE_RE = re.compile(r"^[A-Za-z0-9_\-+/]{24,}={0,2}$")
 
+def _assert_no_secrets(meta: dict) -> None:
+    """Refuse a header carrying a credential. Called by EVERY writer.
+
+    Originally this lived only in main(), which meant the CLI refused and the
+    LIBRARY did not: `stamp_binary(p, {"api_key": "sk-..."})` wrote the secret
+    happily. A guard at the entry point is a door, not a lock — anything that
+    calls the function directly walks past it. build_static_site.py does exactly
+    that, so the hole was live in our own tree.
+
+    Raises ValueError (not SystemExit) so a library caller can handle it, and the
+    CLI converts it to exit 2.
+    """
+    violations = [r for k, v in meta.items()
+                  for val in (v if isinstance(v, list) else [v])
+                  if (r := _looks_like_secret(k, val))]
+    if violations:
+        raise ValueError("; ".join(violations))
+
 
 def _looks_like_secret(key: str, value: str) -> str | None:
     """Return a reason if this key/value pair must not be written, else None."""
@@ -421,6 +457,8 @@ FORMATS = [
     ("json", "fichero hermano .meta.json", "sí"),
     ("png", "chunk iTXt OKF-METADATA", "sí"),
     ("ico", "iTXt en los frames", "no: manda el manifiesto"),
+    ("webp", "hermano X.meta.json (escritor no implementa iTXt)", "sí, por el hermano"),
+    ("jpg", "hermano X.meta.json (escritor no implementa iTXt)", "sí, por el hermano"),
 ]
 
 
@@ -525,14 +563,12 @@ def main(argv=None) -> int:
     if not meta:
         raise SystemExit("cabecera vacía: usa --set clave=valor o --from fichero.yaml")
 
-    # Refuse before writing anything: a secret stamped into a header is a secret
-    # in git, and redacting afterwards is guesswork.
-    violations = [r for k, v in meta.items()
-                  for val in (v if isinstance(v, list) else [v])
-                  if (r := _looks_like_secret(k, val))]
-    if violations:
-        for reason in violations:
-            print(f"RECHAZADO: {reason}", file=sys.stderr)
+    # The writers assert this too; the CLI only translates it to a stable exit code
+    # so a caller can tell "refused" (2) from an I/O failure (1).
+    try:
+        _assert_no_secrets(meta)
+    except ValueError as exc:
+        print(f"RECHAZADO: {exc}", file=sys.stderr)
         raise SystemExit(2)
 
     if args.cmd == "stamp":
