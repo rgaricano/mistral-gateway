@@ -381,6 +381,37 @@ def regenerate_manifest(target: Path | None = None) -> int:
     return len(rows)
 
 
+
+# ------------------------------------------------------------------- secret guard
+# A credential must never reach a file because a tool wrote it there. okf.py takes
+# free-form --set values, so it is exactly the kind of utility that can stamp a
+# password into a document and hand it to git with everything looking correct.
+#
+# Rule (Ricardo, 21-nov): credentials are stored in an env file outside version
+# control or the secret store, and referenced by LOCATION, never by value.
+SECRET_KEY_RE = re.compile(
+    r"(?i)^(api[_-]?key|apikey|token|secret|password|passwd|contrase[ñn]a|"
+    r"private[_-]?key|access[_-]?key|client[_-]?secret|bearer)$")
+
+# High-entropy strings that look like a generated credential rather than prose.
+SECRET_VALUE_RE = re.compile(r"^[A-Za-z0-9_\-+/]{24,}={0,2}$")
+
+
+def _looks_like_secret(key: str, value: str) -> str | None:
+    """Return a reason if this key/value pair must not be written, else None."""
+    key_name = key.strip()
+    text = str(value).strip()
+    if SECRET_KEY_RE.match(key_name) and not text.startswith(("env:", "file:", "vault:", "/")):
+        return (f"el campo {key_name!r} parece una credencial; guarda el valor fuera del "
+                f"fichero y referencia su ubicación (env:VAR, file:RUTA)")
+    if SECRET_VALUE_RE.match(text) and not text.startswith(("http", "assets/", "accounting/", "/")):
+        # long, unbroken, alphanumeric: a generated token, not a path or a title
+        if any(c.isdigit() for c in text) and any(c.isalpha() for c in text):
+            return ("el valor parece una credencial generada (cadena larga alfanumérica); "
+                    "guárdala fuera del fichero y referencia su ubicación")
+    return None
+
+
 # -------------------------------------------------------------------------- CLI
 FORMATS = [
     ("md", "frontmatter YAML entre ---", "sí"),
@@ -493,6 +524,16 @@ def main(argv=None) -> int:
             meta[key] = value
     if not meta:
         raise SystemExit("cabecera vacía: usa --set clave=valor o --from fichero.yaml")
+
+    # Refuse before writing anything: a secret stamped into a header is a secret
+    # in git, and redacting afterwards is guesswork.
+    violations = [r for k, v in meta.items()
+                  for val in (v if isinstance(v, list) else [v])
+                  if (r := _looks_like_secret(k, val))]
+    if violations:
+        for reason in violations:
+            print(f"RECHAZADO: {reason}", file=sys.stderr)
+        raise SystemExit(2)
 
     if args.cmd == "stamp":
         print(stamp_binary(path, meta, dry_run=args.dry_run))
