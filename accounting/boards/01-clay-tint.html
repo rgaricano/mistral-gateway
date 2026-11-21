@@ -2,13 +2,13 @@
 ---
 type: "Design Board"
 title: "01-clay-tint"
-description: "Tinte del artwork clay — variantes A1 ámbar, A2 rosa, A3 coral. Decisión abierta de Ricardo."
-status: "draft"
+description: "Tinte del artwork clay. DECIDIDO por Ricardo: A1 ámbar (con anillo de acento y marca 'va bien'). A2 rosa y A3 coral quedan como referencia."
+status: "decided"
 source: "gentle-companion-aesthetic/design/aesthetic-choices/01-clay-tint.html"
-verified: "2026-11-20"
+verified: "2026-11-21"
 stale_after: "2027-06-30"
 note: "Copia estática de un tablero de PINTO. No editar aquí: se regenera desde el origen."
-generated: "2026-11-21T00:38:20+01:00"
+generated: "2026-11-21T00:59:42+01:00"
 ---
 -->
 <!doctype html>
@@ -48,6 +48,9 @@ generated: "2026-11-21T00:38:20+01:00"
   .chip.status{background:var(--warning-soft);color:var(--warning);border-color:transparent}
   .chip.rose{background:var(--accent-soft);color:var(--accent-text);border-color:transparent}
   .chip.middle{background:rgb(240 149 200 / .08);color:var(--accent-hover);border-color:var(--accent-line)}
+  .chosen{font-family:var(--mono);font-size:.68rem;padding:3px 8px;border-radius:var(--radius-pill);
+    background:var(--ok-soft);color:var(--ok);margin-left:auto}
+  .variant-chosen{border-color:var(--accent-line);box-shadow:var(--clay-raised),0 0 0 1px var(--accent-line)}
   .angles{margin:0 0 8px;font-size:.76rem;color:var(--text-3)}
   .angles b{color:var(--text-2);font-family:var(--mono)}
   .tradeoff{color:var(--text-2);font-size:.84rem;margin:0 0 14px;min-height:4.4em}
@@ -63,8 +66,8 @@ generated: "2026-11-21T00:38:20+01:00"
   .section-head h3 img{height:24px;width:auto;display:block}
   .section-head .meta{font-size:.76rem;color:var(--text-3)}
   .empty{display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface-2);border:1px dashed var(--border-strong);border-radius:var(--radius)}
-  .empty-icon{display:grid;place-items:center;width:44px;height:44px;flex:none;border-radius:14px;background:var(--surface-3);box-shadow:var(--clay-pressed)}
-  .empty-icon img{height:30px;width:auto;display:block}
+  .empty-icon{display:grid;place-items:center;justify-items:center;width:44px;height:44px;flex:none;border-radius:14px;background:var(--surface-3);box-shadow:var(--clay-pressed)}
+  .empty-icon img{width:36px;height:auto;display:block;margin:0 auto}
   .empty p{margin:0;font-size:.8rem;color:var(--text-3)}
   .where{margin:14px 0 0;font-size:.76rem;color:var(--text-3);border-top:1px solid var(--border);padding-top:10px}
   .note{margin:22px 0 0;color:var(--text-2);font-size:.82rem;border-left:2px solid var(--accent-line);padding-left:12px}
@@ -76,10 +79,11 @@ generated: "2026-11-21T00:38:20+01:00"
   <p class="lead">Same markup, same greyscale artwork. The only difference between the three columns is one <code>hue-rotate</code> value in a shared filter, shown in all three places that filter reaches.</p>
   <p class="method">The measured hue under each variant was computed by modelling <code>sepia(0.55) saturate(1.65) hue-rotate(N)</code> on the real <code>bulb.webp</code> and averaging the tinted pixels — not estimated by eye. The rose accent sits at 326&deg;.</p>
   <div class="grid">
-      <section class="variant">
+      <section class="variant variant-chosen">
         <header>
           <span class="chip status">A1</span>
           <h2>Keep amber</h2>
+          <span class="chosen">&#10003; va bien</span>
         </header>
         <p class="angles"><code>hue-rotate(350deg)</code> &rarr; measured hue <b>32deg</b></p>
         <p class="tradeoff">Ships today. The help tile reads as a warm, separate cue. Bonsai2 called it the most off-brand object on the dashboard.</p>

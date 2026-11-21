@@ -26,11 +26,21 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 SKIP_DIRS = {"__pycache__", ".git"}
-# Copies of OTHER owners' artefacts (design boards from PINTO). They are markup
-# with CSS values like rgb(240 149 200 / 0.12): not OUR figures, and rewriting
-# them to Spanish decimals would corrupt someone else's design. We serve them, we
-# do not author them.
-SKIP_DIRS |= {"boards"}
+# Copies of OTHER owners' artefacts, exempt BY FILE, not by directory.
+#
+# PINTO raised the risk of the directory form and was right: if she ever sends a
+# board containing real figures, a whole-directory exemption would skip it
+# silently. Naming each file means a NEW file in boards/ is scanned until someone
+# deliberately adds it here with a reason.
+#
+# What is exempt is CSS values like rgb(240 149 200 / 0.12): not our figures, and
+# rewriting them to Spanish decimals would corrupt another owner's design.
+SKIP_FILES = {
+    "boards/01-clay-tint.html",
+    "boards/02-icon-weight.html",
+    "boards/system.html",
+    "boards/index.html",       # our own index, but it links the boards above
+}
 
 # Numbers that legitimately contain dots and are NOT decimals.
 EXEMPT_PATTERNS = [
@@ -89,6 +99,9 @@ def collect():
     for pat in ("*.md", "**/*.md", "*.html", "**/*.html"):
         for f in glob.glob(str(HERE / pat), recursive=True):
             p = Path(f).resolve()
+            rel = p.relative_to(HERE).as_posix()
+            if rel in SKIP_FILES:
+                continue
             if any(part in SKIP_DIRS for part in p.parts):
                 continue
             docs[p] = None
