@@ -433,10 +433,20 @@ def _assert_no_secrets(meta: dict) -> None:
         raise ValueError("; ".join(violations))
 
 
+# A hash is not a credential: it is a verification artefact and belongs in the
+# header. Recognising the FIELD keeps the value-shape check strict everywhere else,
+# whereas lowering the threshold or excluding hex strings would have opened a gap
+# that a real key could walk through.
+DIGEST_KEY_RE = re.compile(r"(?i)^(md5|sha1|sha256|sha512|hash|digest|checksum|"
+                           r"original_md5|source_md5|etag)$")
+
+
 def _looks_like_secret(key: str, value: str) -> str | None:
     """Return a reason if this key/value pair must not be written, else None."""
     key_name = key.strip()
     text = str(value).strip()
+    if DIGEST_KEY_RE.match(key_name):
+        return None      # a documented digest field, not a secret
     if SECRET_KEY_RE.match(key_name) and not text.startswith(("env:", "file:", "vault:", "/")):
         return (f"el campo {key_name!r} parece una credencial; guarda el valor fuera del "
                 f"fichero y referencia su ubicación (env:VAR, file:RUTA)")

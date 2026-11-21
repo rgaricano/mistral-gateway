@@ -71,6 +71,37 @@ Comprobación: el cuerpo debe empezar exactamente por `<!doctype` tras retirar
 **un** bloque. Si tras retirarlo no empieza por ahí, hay más de un añadido y el
 hash ya no es comparable.
 
+
+## Cuando el original YA trae su propia cabecera
+
+Cambio de procedimiento (21-nov), aprendido rompiéndolo.
+
+Al principio yo copiaba el fichero y le anteponía **mi** cabecera. Con tableros que
+ya venían estampados por PINTO eso hacía algo peor que duplicar: `write_okf`
+**reemplazaba la cabecera existente**, de modo que la copia perdía la procedencia
+de ella y aparecía como mía. La verificación tampoco lo detectaba, porque yo
+comparaba «mi fichero sin mi cabecera» contra el original, y ese original ya
+llevaba la suya.
+
+Regla ahora:
+
+- **Si el original ya tiene cabecera → se copia byte a byte y NO se añade nada.**
+  El md5 de la copia **es** el md5 del original, y eso es verificable de un vistazo.
+- **Si el original no la tiene → se estampa la nuestra**, nombrando la ruta de
+  origen, y se registra el md5 del original en `original_md5` para poder comparar
+  (el fichero completo ya no coincidirá nunca, por construcción).
+
+La consecuencia es más simple que antes: en el primer caso, **bytes servidos ==
+bytes del original**, y el protocolo se reduce a comprobar igualdad exacta.
+
+### Y por qué `generated` acepta fecha sin hora
+
+Los tableros de PINTO declaran `generated: 2026-11-21`. Mi validador exigía
+ISO-8601 con hora y los rechazó los tres. Una fecha sin hora es una afirmación
+honesta de cuándo se generó el documento, y es la convención de otra persona:
+**ceder ahí es lo correcto**. El campo sigue validándose (texto libre como «ayer
+por la tarde» se rechaza), pero la ausencia de hora no es un error.
+
 ## Reglas para añadir un tablero
 
 - Solo ficheros **autocontenidos**: 0 referencias externas, sin CDN.

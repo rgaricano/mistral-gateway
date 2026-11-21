@@ -153,8 +153,14 @@ def validate(path: Path, kind: str):
     if isinstance(gen, dict):                      # OKF v0.2: generated.by / generated.at
         gen = gen.get("at")
     gen = _iso(gen)
-    if gen and not TS_RE.match(str(gen)):
-        problems.append(f"generated is not an ISO-8601 timestamp: {gen!r}")
+    # A DATE without a time is a valid, honest statement of when a document was
+    # generated — and it is the convention other owners in this team use. Demanding
+    # a timestamp rejected three design boards whose provenance was perfectly clear.
+    # The field must still be a real ISO date, not free text; a wrong SHAPE is
+    # caught, an absent time-of-day is not an error.
+    if gen and not (TS_RE.match(str(gen)) or DATE_RE.match(str(gen))):
+        problems.append(
+            f"generated is neither an ISO-8601 timestamp nor an ISO date: {gen!r}")
 
     ver = parsed.get("verified")
     if isinstance(ver, list) and ver:              # OKF v0.2: list of {by, at}
