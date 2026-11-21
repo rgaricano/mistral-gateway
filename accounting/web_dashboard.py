@@ -824,7 +824,10 @@ class Handler(BaseHTTPRequestHandler):
             candidate = (base / path_only[len("/boards/"):]).resolve()
             inside = candidate == base or base in candidate.parents
             f = candidate if inside else None
-            if f is not None and f.is_file():
+            # Only serve what Ricardo is meant to look at: HTML boards. READMEs and
+            # maintenance notes live next to them but are not part of the review.
+            serveable = f is not None and f.is_file() and f.suffix in (".html",)
+            if serveable:
                 ctype = "image/svg+xml" if f.suffix == ".svg" else "text/html; charset=utf-8"
                 body = f.read_bytes()
                 self.send_response(200)
