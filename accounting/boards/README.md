@@ -41,66 +41,57 @@ El tercer paso es el que evita que alguien publique un tablero obsoleto sin dars
 cuenta: un hash solo sirve de algo si alguien vuelve a comprobar los bytes que
 realmente se están sirviendo.
 
-## Por qué se comprueba el cuerpo y no el fichero
+## Qué se compara, y por qué cambió
 
-La cabecera OKF se antepone al copiar, así que el fichero servido **nunca**
-coincidirá byte a byte con el original. Lo que debe coincidir es el **cuerpo**,
-desde `<!doctype` en adelante. Comparar el fichero entero daría un falso positivo
-permanente.
+Antes este documento decía: *«la cabecera se antepone al copiar, así que el fichero
+servido nunca coincidirá; compara el cuerpo desde `<!doctype`»*.
 
-Aviso aprendido de PINTO: su primer sondeo dio un desajuste falso porque buscaba
-`<!DOCTYPE` en mayúsculas y el fichero empieza en minúsculas. **Un desajuste de
-hash es una afirmación sobre una comparación, y la comparación misma puede ser lo
-que está roto.**
+**Eso ya no es cierto para nuestros tableros.** Los originales de PINTO **ya traen
+su cabecera**, así que no se antepone nada y **el fichero entero coincide**. Comparar
+el cuerpo sería seguir usando el procedimiento complicado para un caso que se volvió
+simple — y ese procedimiento tenía el defecto descrito abajo.
 
+Sigue siendo cierto en el otro caso: si algún día se copia un original **sin**
+cabecera, la nuestra lo desalinea y hay que comparar el cuerpo.
 
-### Precondición del hash del cuerpo (señalada por PINTO, 21-nov)
+## El defecto que obligó a cambiar el procedimiento
 
-Comparar el cuerpo solo prueba lo que dice probar **mientras haya exactamente un
-añadido antes de `<!doctype`**: la cabecera OKF que pone el copiador.
+La versión anterior de esta sección explicaba cómo quitar un bloque y comparar el
+resto, con su precondición. **Ese procedimiento pasaba mientras destruía lo que
+decía proteger:** con dos cabeceras presentes —la del autor y la del copiador— el
+«resto» seguía conteniendo la del autor, así que la comparación medía un tramo que
+nadie había declarado.
 
-Si algún día un segundo implicado estampa algo más arriba —otra cabecera, una
-marca de revisión, un comentario de otra herramienta— la comparación **seguiría
-pasando** y estaría comparando un tramo distinto. Es un fallo silencioso, que es
-la peor clase: el hash coincide y ya no significa lo mismo.
+**No se arregló endureciendo la comprobación. Se arregló eliminándola**, copiando
+byte a byte. Un protocolo que no puede pasar sobre el tramo equivocado vale más que
+uno que documenta cómo no hacerlo.
 
-Precondición, por tanto: **un solo bloque antes del doctype, y lo pone el
-copiador.** Si eso cambia, cambia también el punto de anclaje de la comparación.
+Aviso de PINTO que se conserva porque es independiente de todo esto: su primer
+sondeo dio un desajuste falso porque buscaba `<!DOCTYPE` en mayúsculas y el fichero
+empieza en minúsculas. **Un desajuste de hash es una afirmación sobre una
+comparación, y la comparación misma puede ser lo que está roto.**
 
-Comprobación: el cuerpo debe empezar exactamente por `<!doctype` tras retirar
-**un** bloque. Si tras retirarlo no empieza por ahí, hay más de un añadido y el
-hash ya no es comparable.
+### Dos ramas, y solo una tiene ancla
 
+| Caso | Procedimiento | Verificación |
+|---|---|---|
+| **El original ya trae su cabecera** (lo normal ahora) | copia **byte a byte**, no se añade nada | el md5 de la copia **es** el del original: una igualdad exacta |
+| **El original no la trae** | se estampa la nuestra nombrando el origen, y se guarda su md5 en `original_md5` | el cuerpo servido, tras retirar **un** bloque, debe coincidir con el original |
 
-## Cuando el original YA trae su propia cabecera
+La primera rama no tiene ancla, ni precondición, ni forma de pasar sobre el tramo
+equivocado: **no hay nada que comparar mal, porque se comparan ficheros enteros.**
 
-Cambio de procedimiento (21-nov), aprendido rompiéndolo.
+La segunda sí necesita el ancla del `<doctype` y su precondición — un solo añadido
+antes del doctype. Solo aplica a originales sin estampar, que hoy no tenemos.
 
-Al principio yo copiaba el fichero y le anteponía **mi** cabecera. Con tableros que
-ya venían estampados por PINTO eso hacía algo peor que duplicar: `write_okf`
-**reemplazaba la cabecera existente**, de modo que la copia perdía la procedencia
-de ella y aparecía como mía. La verificación tampoco lo detectaba, porque yo
-comparaba «mi fichero sin mi cabecera» contra el original, y ese original ya
-llevaba la suya.
+**Por qué esto importa:** el procedimiento anterior quitaba un bloque y comparaba
+el resto. Con dos cabeceras presentes, ese «resto» seguía conteniendo la cabecera
+del autor, así que la comprobación **pasaba mientras destruía la procedencia que
+decía proteger**. Una comprobación que aprueba mientras rompe lo comprobado es
+peor que no tenerla.
 
-Regla ahora:
-
-- **Si el original ya tiene cabecera → se copia byte a byte y NO se añade nada.**
-  El md5 de la copia **es** el md5 del original, y eso es verificable de un vistazo.
-- **Si el original no la tiene → se estampa la nuestra**, nombrando la ruta de
-  origen, y se registra el md5 del original en `original_md5` para poder comparar
-  (el fichero completo ya no coincidirá nunca, por construcción).
-
-La consecuencia es más simple que antes: en el primer caso, **bytes servidos ==
-bytes del original**, y el protocolo se reduce a comprobar igualdad exacta.
-
-### Y por qué `generated` acepta fecha sin hora
-
-Los tableros de PINTO declaran `generated: 2026-11-21`. Mi validador exigía
-ISO-8601 con hora y los rechazó los tres. Una fecha sin hora es una afirmación
-honesta de cuándo se generó el documento, y es la convención de otra persona:
-**ceder ahí es lo correcto**. El campo sigue validándose (texto libre como «ayer
-por la tarde» se rechaza), pero la ausencia de hora no es un error.
+**Regla que evita repetirlo:** cuando un hash no cuadra, **sospecha del
+procedimiento antes que del fichero.** Así se encontró este.
 
 ## Reglas para añadir un tablero
 
